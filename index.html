@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Roller</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js for lightweight reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-3px, 0px) rotate(-5deg); }
+            40% { transform: translate(1px, -1px) rotate(5deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            80% { transform: translate(1px, -1px) rotate(-3deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        .rolling {
+            animation: shake 0.4s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-lg bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700"
+         x-data="diceRoller()" 
+         x-init="init()">
+        
+        <h1 class="text-3xl font-bold text-center mb-6 text-indigo-400">🎲 Dice Roller</h1>
+
+        <!-- Controls: Choose Number of Dice -->
+        <div class="mb-6 flex flex-col items-center">
+            <label class="text-sm font-medium text-slate-300 mb-2">
+                Number of Dice to Roll: <span class="font-bold text-indigo-400" x-text="numDice"></span>
+            </label>
+            <div class="flex gap-2">
+                <template x-for="n in 6" :key="n">
+                    <button @click="numDice = n"
+                            :class="numDice === n ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'"
+                            class="w-10 h-10 rounded-lg font-bold transition transform active:scale-95"
+                            x-text="n">
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <!-- Roll Button -->
+        <div class="mb-8 flex justify-center">
+            <button @click="rollDice"
+                    :disabled="isRolling"
+                    class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition transform active:scale-95 disabled:opacity-50">
+                <span x-show="!isRolling">Roll Dice!</span>
+                <span x-show="isRolling">Rolling...</span>
+            </button>
+        </div>
+
+        <!-- Dice Display Area -->
+        <div class="mb-8 min-h-[120px] flex flex-wrap items-center justify-center gap-4">
+            <template x-for="(die, index) in currentRoll" :key="index">
+                <div :class="{'rolling': isRolling}" 
+                     class="w-16 h-16 bg-white rounded-xl shadow-md flex items-center justify-center p-2 text-slate-900 border-2 border-slate-200">
+                    <!-- Dynamic Dot Face Rendering -->
+                    <div class="w-full h-full relative grid grid-cols-3 grid-rows-3">
+                        <!-- Dot 1 (Top-Left) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die === 2 || die === 3 || die === 4 || die === 5 || die === 6"></div>
+                        </div>
+                        <!-- Dot 2 (Top-Center) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="false"></div>
+                        </div>
+                        <!-- Dot 3 (Top-Right) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die >= 4"></div>
+                        </div>
+                        <!-- Dot 4 (Mid-Left) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die === 6"></div>
+                        </div>
+                        <!-- Dot 5 (Center) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die === 1 || die === 3 || die === 5"></div>
+                        </div>
+                        <!-- Dot 6 (Mid-Right) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die === 6"></div>
+                        </div>
+                        <!-- Dot 7 (Bottom-Left) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die >= 4"></div>
+                        </div>
+                        <!-- Dot 8 (Bottom-Center) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="false"></div>
+                        </div>
+                        <!-- Dot 9 (Bottom-Right) -->
+                        <div class="flex items-center justify-center">
+                            <div class="w-2.5 h-2.5 bg-slate-900 rounded-full" x-show="die === 2 || die === 3 || die === 4 || die === 5 || die === 6"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Total Display -->
+        <div class="text-center mb-8 bg-slate-700/50 py-3 rounded-xl border border-slate-700">
+            <span class="text-slate-400 text-sm">Total:</span>
+            <span class="text-2xl font-bold text-indigo-400 ml-2" x-text="currentTotal"></span>
+        </div>
+
+        <!-- History & Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Last 5 Rolls History -->
+            <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                <h2 class="text-sm font-semibold text-slate-300 mb-3">Recent Rolls (Last 5)</h2>
+                <template x-if="history.length === 0">
+                    <p class="text-xs text-slate-500 italic">No rolls yet.</p>
+                </template>
+                <ul class="space-y-2">
+                    <template x-for="item in history" :key="item.id">
+                        <li class="flex justify-between items-center text-xs bg-slate-800 p-2 rounded border border-slate-700/50">
+                            <span class="text-slate-400" x-text="item.dice.join(', ')"></span>
+                            <span class="font-bold text-indigo-300" x-text="'Total: ' + item.total"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Stretch: Total Frequency Tracker -->
+            <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-sm font-semibold text-slate-300">Total Frequencies</h2>
+                    <button @click="resetStats" class="text-xs text-red-400 hover:underline">Reset</button>
+                </div>
+                <template x-if="Object.keys(frequencies).length === 0">
+                    <p class="text-xs text-slate-500 italic">No frequency data yet.</p>
+                </template>
+                <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    <template x-for="(count, total) in frequencies" :key="total">
+                        <div class="flex justify-between items-center text-xs bg-slate-800 px-2 py-1.5 rounded border border-slate-700/50">
+                            <span class="text-slate-300 font-medium" x-text="'Score ' + total + ':'"></span>
+                            <span class="bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded font-bold" x-text="count + ' time(s)'"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function diceRoller() {
+            return {
+                numDice: 1,
+                currentRoll: [1],
+                currentTotal: 1,
+                isRolling: false,
+                history: [],
+                frequencies: {},
+
+                init() { 
+                    if (savedHistory) this.history = JSON.parse(savedHistory);
+                    if (savedFreq) this.frequencies = JSON.parse(savedFreq);
+                },
+
+                rollDice() {
+                    if (this.isRolling) return;
+                    this.isRolling = true;
+
+                    // Quick shuffle simulation during animation
+                    let counter = 0;
+                    const interval = setInterval(() => {
+                        this.currentRoll = Array.from({ length: this.numDice }, () => Math.floor(Math.random() * 6) + 1);
+                        counter++;
+                        if (counter > 6) {
+                            clearInterval(interval);
+                            this.finalizeRoll();
+                        }
+                    }, 50);
+                },
+
+                finalizeRoll() {
+                    // Final roll generation
+                    let rolled = Array.from({ length: this.numDice }, () => Math.floor(Math.random() * 6) + 1);
+                    let total = rolled.reduce((a, b) => a + b, 0);
+
+                    this.currentRoll = rolled;
+                    this.currentTotal = total;
+                    this.isRolling = false;
+
+                    // Update History (keep last 5)
+                    this.history.unshift({
+                        id: Date.now(),
+                        dice: [...rolled],
+                        total: total
+                    });
+                    if (this.history.length > 5) {
+                        this.history.pop();
+                    }
+
+                    // Update Frequency Stretch Goal
+                    if (!this.frequencies[total]) {
+                        this.frequencies[total] = 0;
+                    }
+                    this.frequencies[total]++;
+
+                   
+                },
+
+                resetStats() {
+                    this.history = [];
+                    this.frequencies = {};
+                },
+
+                
+            }
+        }
+    </script>
+</body>
+</html>
